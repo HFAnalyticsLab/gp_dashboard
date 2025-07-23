@@ -1,0 +1,116 @@
+library(tidyverse)
+
+# Function to load and process regional data files
+load_regional_data <- function(directory, dataset_id) {
+  setwd(directory)
+  list.files(pattern = "*.csv") %>%
+    map_df(~read_csv(., col_types = cols(.default = "c"))) %>%
+    mutate(dataset = dataset_id)
+}
+
+# Load all datasets
+regional_GP_data_jun19 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_jun2019", 0)
+regional_GP_data_dec21 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_dec2021", 1)
+regional_GP_data_mar_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_mar2024", 2)
+regional_GP_data_apr_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_apr2024", 3)
+regional_GP_data_jul_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_jul2024", 4)  # add new data here and add +1 to the dataset ID
+
+# tidying two historic datasets
+regional_GP_data_jun19 <- regional_GP_data_jun19 %>%
+  rename(APPOINTMENT_MONTH = Appointment_Month) %>%
+  mutate(APPOINTMENT_MONTH = str_to_upper(APPOINTMENT_MONTH),
+         APPOINTMENT_MONTH = str_remove_all(APPOINTMENT_MONTH, '-'),
+         HCP_TYPE = str_replace_all(HCP_TYPE, 'HCP Type Not Provided', 'Unknown'))
+
+regional_GP_data_jun19$APPOINTMENT_MONTH <- sub("(^[[:alpha:]]{3})([[:digit:]]{2}$)", "\\1\\U20\\2", regional_GP_data_jun19$APPOINTMENT_MONTH, perl = TRUE)
+
+regional_GP_data_dec21 <- regional_GP_data_dec21 %>%
+  rename(APPOINTMENT_MONTH = Appointment_Month) %>%
+  mutate(APPOINTMENT_MONTH = str_to_upper(APPOINTMENT_MONTH),
+         APPOINTMENT_MONTH = str_remove_all(APPOINTMENT_MONTH, '-'),
+         HCP_TYPE = str_replace_all(HCP_TYPE, 'HCP Type Not Provided', 'Unknown'))
+
+
+# Combine all datasets into one
+complete_GP_appointment_df <- bind_rows(
+  regional_GP_data_jun19, 
+  regional_GP_data_dec21, 
+  regional_GP_data_mar_24, 
+  regional_GP_data_apr_24, 
+  regional_GP_data_jul_24
+)
+
+# Remove duplicates from data overlaps between new datasets ###################
+# and create appointment date variable 
+
+complete_JAN2018_JUL24_no_dups <- complete_GP_appointment_df %>%
+  select(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS, dataset) %>%
+  group_by(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE) %>%
+  mutate(year = as.numeric(substr(APPOINTMENT_MONTH,4,7)), # creating year variable from string date 
+         month = match(str_to_sentence(substr(APPOINTMENT_MONTH,0,3)),month.abb), # separating date string to create appointment month  
+         date = make_date(year, month, 1), # creating date vvariable
+         HCP_TYPE = str_replace_all(HCP_TYPE, ' ', '_')) %>% #checking that there's no spaces e.g. HCP type -> HCP_type
+  ungroup() %>%
+  group_by(date, APPT_MODE) %>%
+  mutate(correct_dataset = max(dataset)) %>% # within date & APP_MODE grouping, select the highest dataset
+  filter(dataset == correct_dataset) %>% # only keep rows with the highest (latest) dataset number
+  select(-dataset, -correct_dataset) %>%
+  ungroup()
+
+
+#  Calculate total appointments by month #######################################
+
+regional_GP_data_JAN18_JUL24_df <- complete_JAN2018_JUL24_no_dups %>% # change the date from JUL24 when new data added 
+  select(HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS, date) %>%
+  group_by(date, HCP_TYPE, APPT_MODE) %>%
+  summarise(appts = sum(as.numeric(COUNT_OF_APPOINTMENTS)), .groups='keep') %>% # summing all count of appointments 
+  group_by(date, HCP_TYPE) %>%
+  mutate(tot = sum(appts)) %>%  
+  ungroup() %>%
+  filter(HCP_TYPE == 'GP') %>%
+  dplyr::select(date, HCP_TYPE, APPT_MODE, appts, tot, date) %>%
+  arrange(date) 
+
+# Load and process PCN data
+setwd("~/GP_dashboard/Access/data/pcn_data")
+pcn_jul_2024 <- read_csv("pcn_granular_jul2024.csv")
+
+pcn_jul_2024_df <- pcn_jul_2024 %>%
+  select(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS) %>%
+  group_by(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE) %>%
+  summarise(appts = sum(as.numeric(COUNT_OF_APPOINTMENTS)), .groups='keep') %>%
+  group_by(APPOINTMENT_MONTH, HCP_TYPE) %>%
+  mutate(
+    tot = sum(appts),
+    year = as.numeric(substr(APPOINTMENT_MONTH, 6, 9)),
+    month = match(str_to_sentence(substr(APPOINTMENT_MONTH, 3, 5)), month.abb),
+    date = make_date(year, month, 1),
+    HCP_TYPE = str_replace_all(HCP_TYPE, ' ', '_')
+  ) %>%
+  ungroup() %>%
+  filter(HCP_TYPE == 'GP') %>%
+  select(date, HCP_TYPE, APPT_MODE, appts, tot) %>%
+  arrange(date) %>%
+  rename(appts_pcn = appts, tot_pcn = tot) 
+
+
+# Append PCN appointments to the main dataset
+final_results <- left_join(regional_GP_data_JAN18_JUL24_df, pcn_jul_2024_df, by = c('date', 'HCP_TYPE', 'APPT_MODE')) %>%
+    mutate_all(~replace(., is.na(.), 0)) %>%
+    mutate(
+    apps_all = appts + appts_pcn,
+    tot_all = tot + tot_pcn,
+    final_percentage = round((apps_all / tot_all*100), 2)
+  )
+
+
+# Save outputs - remember to add the date range in 
+# setwd("~/GP_dashboard/Access/output")
+# write.csv(final_results, 'appointments_GP_by_mode_of_consultations_(date_XXX).csv')
+
+final_results_flourish <- final_results %>%
+  select(date, APPT_MODE, final_percentage) %>%
+  pivot_wider(names_from = APPT_MODE, values_from = final_percentage) %>%
+  view()
+
+# write.csv(final_results_flourish, 'appointments_GP_by_mode_of_consultations_flourish_(date_XXX).csv')
