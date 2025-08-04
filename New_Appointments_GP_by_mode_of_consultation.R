@@ -1,19 +1,21 @@
 library(tidyverse)
 
+setwd("P:/opiemars/Documents/gp_dashboard")
+
 # Function to load and process regional data files
 load_regional_data <- function(directory, dataset_id) {
-  setwd(directory)
+  #setwd(directory)
   list.files(pattern = "*.csv") %>%
     map_df(~read_csv(., col_types = cols(.default = "c"))) %>%
     mutate(dataset = dataset_id)
 }
 
 # Load all datasets
-regional_GP_data_jun19 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_jun2019", 0)
-regional_GP_data_dec21 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_dec2021", 1)
-regional_GP_data_mar_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_mar2024", 2)
-regional_GP_data_apr_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_apr2024", 3)
-regional_GP_data_jul_24 <- load_regional_data("~/GP_dashboard/Access/data/appointment_data/regional_tabs_jul2024", 4)  # add new data here and add +1 to the dataset ID
+regional_GP_data_jun19 <- load_regional_data("data/appointment_data/regional_tabs_jun2019", 0)
+regional_GP_data_dec21 <- load_regional_data("data/appointment_data/regional_tabs_dec2021", 1)
+regional_GP_data_mar_24 <- load_regional_data("data/appointment_data/regional_tabs_mar2024", 2)
+regional_GP_data_apr_24 <- load_regional_data("data/appointment_data/regional_tabs_apr2024", 3)
+regional_GP_data_jul_24 <- load_regional_data("data/appointment_data/regional_tabs_jul2024", 4)  # add new data here and add +1 to the dataset ID
 
 # tidying two historic datasets
 regional_GP_data_jun19 <- regional_GP_data_jun19 %>%
@@ -72,8 +74,8 @@ regional_GP_data_JAN18_JUL24_df <- complete_JAN2018_JUL24_no_dups %>% # change t
   arrange(date) 
 
 # Load and process PCN data
-setwd("~/GP_dashboard/Access/data/pcn_data")
-pcn_jul_2024 <- read_csv("pcn_granular_jul2024.csv")
+
+pcn_jul_2024 <- read_csv("data/pcn_data/pcn_granular_jul2024.csv")
 
 pcn_jul_2024_df <- pcn_jul_2024 %>%
   select(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS) %>%

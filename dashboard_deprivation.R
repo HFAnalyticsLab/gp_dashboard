@@ -387,7 +387,7 @@ qof_datasets <-   lapply(
       colnames(keep) <- c("PRACTICE_CODE", "TOTAL_POINTS")
       keep$YEAR = as.numeric(year)
       
-    } else if(year %in% c(2021:2022)) {
+    } else if(year %in% c(2021:2023)) {
       
       keep <- qof_scores[, c("Practice.code", "Achievement.score..635.max.")]
       keep$Achievement.score..635.max. <- as.numeric(keep$Achievement.score..635.max.)
