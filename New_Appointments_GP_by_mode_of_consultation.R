@@ -1,21 +1,26 @@
 library(tidyverse)
 
-setwd("P:/opiemars/Documents/gp_dashboard")
+
+#directory <- "P:/opiemars/Documents/gp_dashboard/data"
 
 # Function to load and process regional data files
 load_regional_data <- function(directory, dataset_id) {
-  #setwd(directory)
+  setwd(paste0("P:/opiemars/Documents/gp_dashboard/data/appointment_data/", directory))
   list.files(pattern = "*.csv") %>%
     map_df(~read_csv(., col_types = cols(.default = "c"))) %>%
     mutate(dataset = dataset_id)
 }
 
 # Load all datasets
-regional_GP_data_jun19 <- load_regional_data("data/appointment_data/regional_tabs_jun2019", 0)
-regional_GP_data_dec21 <- load_regional_data("data/appointment_data/regional_tabs_dec2021", 1)
-regional_GP_data_mar_24 <- load_regional_data("data/appointment_data/regional_tabs_mar2024", 2)
-regional_GP_data_apr_24 <- load_regional_data("data/appointment_data/regional_tabs_apr2024", 3)
-regional_GP_data_jul_24 <- load_regional_data("data/appointment_data/regional_tabs_jul2024", 4)  # add new data here and add +1 to the dataset ID
+regional_GP_data_jun19 <- load_regional_data("regional_tabs_jun2019", 0)
+regional_GP_data_dec21 <- load_regional_data("regional_tabs_dec2021", 1)
+regional_GP_data_mar_24 <- load_regional_data("regional_tabs_mar2024", 2)
+regional_GP_data_apr_24 <- load_regional_data("regional_tabs_apr2024", 3)
+regional_GP_data_jul_24 <- load_regional_data("regional_tabs_jul2024", 4)
+regional_GP_data_oct_24 <- load_regional_data("regional_tabs_oct2024", 5)
+regional_GP_data_jan_25 <- load_regional_data("regional_tabs_jan2025", 6)
+regional_GP_data_apr_25 <- load_regional_data("regional_tabs_apr2025", 7) # add new data here and add +1 to the dataset ID
+
 
 # tidying two historic datasets
 regional_GP_data_jun19 <- regional_GP_data_jun19 %>%
@@ -39,7 +44,10 @@ complete_GP_appointment_df <- bind_rows(
   regional_GP_data_dec21, 
   regional_GP_data_mar_24, 
   regional_GP_data_apr_24, 
-  regional_GP_data_jul_24
+  regional_GP_data_jul_24,
+  regional_GP_data_oct_24,
+  regional_GP_data_jan_25,
+  regional_GP_data_apr_25
 )
 
 # Remove duplicates from data overlaps between new datasets ###################
@@ -74,8 +82,9 @@ regional_GP_data_JAN18_JUL24_df <- complete_JAN2018_JUL24_no_dups %>% # change t
   arrange(date) 
 
 # Load and process PCN data
+setwd("P:/opiemars/Documents/gp_dashboard/data")
 
-pcn_jul_2024 <- read_csv("data/pcn_data/pcn_granular_jul2024.csv")
+pcn_jul_2024 <- read_csv("pcn_data/pcn_granular_apr2025.csv")
 
 pcn_jul_2024_df <- pcn_jul_2024 %>%
   select(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS) %>%
@@ -107,12 +116,12 @@ final_results <- left_join(regional_GP_data_JAN18_JUL24_df, pcn_jul_2024_df, by 
 
 
 # Save outputs - remember to add the date range in 
-# setwd("~/GP_dashboard/Access/output")
-# write.csv(final_results, 'appointments_GP_by_mode_of_consultations_(date_XXX).csv')
+setwd("P:/opiemars/Documents/gp_dashboard/output")
+write.csv(final_results, paste0('appointments_GP_by_mode_of_consultations_',format(today(),'%d%m%y'),'.csv'))
 
 final_results_flourish <- final_results %>%
   select(date, APPT_MODE, final_percentage) %>%
   pivot_wider(names_from = APPT_MODE, values_from = final_percentage) %>%
   view()
 
-# write.csv(final_results_flourish, 'appointments_GP_by_mode_of_consultations_flourish_(date_XXX).csv')
+write.csv(final_results_flourish, paste0('appointments_GP_by_mode_of_consultations_flourish_',format(today(),'%d%m%y'),'.csv'))
