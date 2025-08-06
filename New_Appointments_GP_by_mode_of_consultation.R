@@ -20,7 +20,7 @@ regional_GP_data_jul_24 <- load_regional_data("regional_tabs_jul2024", 4)
 regional_GP_data_oct_24 <- load_regional_data("regional_tabs_oct2024", 5)
 regional_GP_data_jan_25 <- load_regional_data("regional_tabs_jan2025", 6)
 regional_GP_data_apr_25 <- load_regional_data("regional_tabs_apr2025", 7) # add new data here and add +1 to the dataset ID
-
+regional_GP_data_may_25 <- load_regional_data("regional_tabs_may2025", 8)
 
 # tidying two historic datasets
 regional_GP_data_jun19 <- regional_GP_data_jun19 %>%
@@ -47,7 +47,8 @@ complete_GP_appointment_df <- bind_rows(
   regional_GP_data_jul_24,
   regional_GP_data_oct_24,
   regional_GP_data_jan_25,
-  regional_GP_data_apr_25
+  regional_GP_data_apr_25,
+  regional_GP_data_may_25
 )
 
 # Remove duplicates from data overlaps between new datasets ###################
@@ -84,7 +85,7 @@ regional_GP_data_JAN18_JUL24_df <- complete_JAN2018_JUL24_no_dups %>% # change t
 # Load and process PCN data
 setwd("P:/opiemars/Documents/gp_dashboard/data")
 
-pcn_jul_2024 <- read_csv("pcn_data/pcn_granular_apr2025.csv")
+pcn_jul_2024 <- read_csv("pcn_data/pcn_granular_may2025.csv")
 
 pcn_jul_2024_df <- pcn_jul_2024 %>%
   select(APPOINTMENT_MONTH, HCP_TYPE, APPT_MODE, COUNT_OF_APPOINTMENTS) %>%
