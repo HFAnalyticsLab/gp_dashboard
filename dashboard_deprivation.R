@@ -54,7 +54,7 @@ weighted_imd <- weighted_mapping  %>%
 imd_2011_2021 <- rbind(imd, weighted_imd)
 
 
-year_list <- c(2017:2023)
+year_list <- c(2017:2025)
 
 
 load_ons_data <- function(year, sex) {
@@ -72,7 +72,7 @@ load_ons_data <- function(year, sex) {
   } else if(year == 2021) {
     object_url = "data/population/sapelsoasyoatablefinal.xlsx"
     excel_sheet ="Mid-2021 LSOA 2021"
-  } else if(year %in% c(2022:2023)) {
+  } else if(year %in% c(2022:2025)) {
     object_url = "data/population/sapelsoasyoatablefinal.xlsx"
     excel_sheet ="Mid-2022 LSOA 2021"
   } # end setting the object url
@@ -121,7 +121,7 @@ load_ons_data <- function(year, sex) {
     #   trim_ws=TRUE,
     #   .name_repair = "universal")
     
-  } else if(year %in% c(2021:2023)) {
+  } else if(year %in% c(2021:2025)) {
     
     lsoa_date = 2021
     
@@ -162,7 +162,7 @@ load_ons_data <- function(year, sex) {
              SEX = sex) %>%
       rename(LSOA_CODE = LSOA.Code)
     
-  } else if (year %in% c(2021:2023)) {
+  } else if (year %in% c(2021:2025)) {
     
     data1 <- data %>%
       select(-c(LAD.2021.Code, LAD.2021.Name, LSOA.2021.Name, Total)) %>%
@@ -201,8 +201,14 @@ load_ons_data <- function(year, sex) {
 ons_data_M <- lapply(year_list, load_ons_data, sex="Males")
 ons_data_F <- lapply(year_list, load_ons_data, sex="Females")
 
+
+
 ons_both <- c(ons_data_M, ons_data_F)
 ons_df <- as.data.frame(do.call(rbind, ons_both))
+
+ons_df <- rbind(ons_df, ons_df_F_2024, ons_df_F_2025, ons_df_M_2024, ons_df_M_2025)
+
+write_csv(ons_df, "ons_df.csv")
 
 ## calculate weighted LSOA populations using Carr Hill formula values from 'Level or not?'
 
@@ -278,7 +284,14 @@ for (i in seq_along(lsoa_attributions)) {
 lsoa_attributions_df <- as.data.frame(do.call(rbind, lsoa_attributions))
 
 lsoa_prac_pc = lsoa_attributions_df %>%
-  mutate(YEAR = as.numeric(str_sub(EXTRACT_DATE, start = -4))) %>%
+  # changed here because year format changed between extracts
+  mutate(
+    YEAR = case_when(str_detect(EXTRACT_DATE, '^2') ~ str_sub(EXTRACT_DATE, 1,4),
+                     TRUE ~ str_sub(EXTRACT_DATE, start = -4)
+           ),
+    YEAR = as.numeric(YEAR)
+  ) %>%
+  #mutate(YEAR = as.numeric(str_sub(EXTRACT_DATE, start = -4))) %>%
   select(YEAR, PRACTICE_CODE, PRACTICE_NAME, LSOA_CODE, NUMBER_OF_PATIENTS) %>%
   group_by(PRACTICE_CODE, YEAR) %>%
   mutate(total_pat_in_practice = sum(NUMBER_OF_PATIENTS),
@@ -344,7 +357,8 @@ attribute_gps_to_lsoa <- lsoa_prac_pc %>%
   summarise(gps_lsoa = sum(pc_fte_gps, na.rm=T)) %>%
   left_join(adj_pop_norm, by=c("LSOA_CODE"="LSOA_CODE", "YEAR"="YEAR")) %>%
   mutate(LSOA_DATE = case_when(YEAR %in% c(2017:2020) ~ 2011,
-                               YEAR %in% c(2021:2023) ~ 2021)) %>%
+                               #changed year
+                               YEAR %in% c(2021:2025) ~ 2021)) %>%
   left_join(imd_2011_2021, by=c("LSOA_CODE"="LSOA_CODE", "LSOA_DATE"= "LSOA_DATE"))
 
 
@@ -387,7 +401,7 @@ qof_datasets <-   lapply(
       colnames(keep) <- c("PRACTICE_CODE", "TOTAL_POINTS")
       keep$YEAR = as.numeric(year)
       
-    } else if(year %in% c(2021:2023)) {
+    } else if(year %in% c(2021:2025)) {
       
       keep <- qof_scores[, c("Practice.code", "Achievement.score..635.max.")]
       keep$Achievement.score..635.max. <- as.numeric(keep$Achievement.score..635.max.)
@@ -407,7 +421,7 @@ qof_imd <- inner_join(qof_df, prac_imd, by=c("PRACTICE_CODE", "YEAR")) %>%
   mutate(
     percentage = case_when(
       YEAR %in% c(2017:2020) ~ round((POINTS/559)*100,2),
-      YEAR %in% c(2021:2023) ~ round((POINTS/635)*100,2)
+      YEAR %in% c(2021:2025) ~ round((POINTS/635)*100,2)
     )
   )
 
