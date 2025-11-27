@@ -210,6 +210,8 @@ ons_df <- rbind(ons_df, ons_df_F_2024, ons_df_F_2025, ons_df_M_2024, ons_df_M_20
 
 write_csv(ons_df, "ons_df.csv")
 
+ons_df <- read_csv("ons_df.csv")
+
 ## calculate weighted LSOA populations using Carr Hill formula values from 'Level or not?'
 
 adj_pop_df <- ons_df %>%
