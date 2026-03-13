@@ -87,7 +87,7 @@ regional_GP_data_JAN18_JUL24_df <- complete_JAN2018_JUL24_no_dups %>% # change t
   arrange(date) 
 
 # Load and process PCN data
-setwd("P:/opiemars/Documents/gp_dashboard/data")
+setwd("P:/opiemars/Documents/gp_dashboard/data/pcn_data")
 
 pcn_granular_dec2025 <- read_csv("pcn_granular_dec2025.csv") # load new pcn data here
 
@@ -130,3 +130,4 @@ final_results_flourish <- final_results %>%
   view()
 
 write.csv(final_results_flourish, paste0('appointments_GP_by_mode_of_consultations_flourish_',format(today(),'%d%m%y'),'.csv'))
+
